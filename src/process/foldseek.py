@@ -1,5 +1,6 @@
 import pandas as pd
 import glob
+import numpy as np
 import pdb
 
 def parse_results(results_dir, db='pdb100'):
@@ -24,4 +25,4 @@ def write_ids_for_download(pdb_ids, outname):
 
 
 aln_seqs, pdb_ids, pdb_chains = parse_results('../../data/Foldseek_results/')
-write_ids_for_download(pdb_ids, '../../data/Foldseek_results/mmcif/')
+write_ids_for_download(pdb_ids, '../../data/Foldseek_results/mmcif/ids.txt')
