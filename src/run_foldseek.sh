@@ -8,5 +8,6 @@ mkdir $MMCIFDIR
 
 #Download pdb files
 bash ./process/batch_download.sh -f $MMCIFDIR/ids.txt -c -o $MMCIFDIR
-
+#Unzip
+gunzip $MMCIFDIR/*.gz
 #Parse the mmcif files towards the interacting chains
