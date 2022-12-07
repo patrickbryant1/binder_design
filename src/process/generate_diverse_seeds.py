@@ -353,16 +353,15 @@ def write_seeds_for_design(seed_df, search_structure, mmcifdir, outdir, min_cont
         seed_no+=1
 ############################MAIN#############################
 #Process
-aln_seqs, pdb_ids, pdb_chains = parse_results('../../data/Foldseek_results/')
+#aln_seqs, pdb_ids, pdb_chains = parse_results('../../data/Foldseek_results/')
 #write_ids_for_download(pdb_ids, '../../data/Foldseek_results/mmcif/ids.txt')
 #Get seeds
-mmcifdir = '../../data/Foldseek_results/mmcif/'
-outdir = '../../data/Foldseek_results/mmcif/seeds/'
-min_len, max_len = 10, 50
-try:
-    seed_df = pd.read_csv(outdir+'seed_df.csv')
-except:
-    pdb.set_trace()
-    seed_df = get_interaction_seeds(pdb_ids, pdb_chains, mmcifdir, min_len, max_len, outdir)
-#Pick seeds based on contact density and COM diff (avoid repetitive seeds)
-write_seeds_for_design(seed_df, '../../data/3SQG_C.pdb', mmcifdir, outdir, min_contacts_per_pos=1, COM_min_dist=2)
+#mmcifdir = '../../data/Foldseek_results/mmcif/'
+#outdir = '../../data/Foldseek_results/mmcif/seeds/'
+#min_len, max_len = 10, 50
+#try:
+#     seed_df = pd.read_csv(outdir+'seed_df.csv')
+# except:
+#     seed_df = get_interaction_seeds(pdb_ids, pdb_chains, mmcifdir, min_len, max_len, outdir)
+# #Pick seeds based on contact density and COM diff (avoid repetitive seeds)
+# write_seeds_for_design(seed_df, '../../data/3SQG_C.pdb', mmcifdir, outdir, min_contacts_per_pos=1, COM_min_dist=2)
