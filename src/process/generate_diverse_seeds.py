@@ -3,6 +3,7 @@ import glob
 import numpy as np
 from Bio.PDB import MMCIFParser, PDBParser
 from collections import Counter
+from Bio.SVDSuperimposer import SVDSuperimposer
 import pdb
 
 
@@ -192,7 +193,19 @@ def calc_COM(search_CA_coords, search_seq, target_CA_coords, target_seq, seed_CA
     of the search structure and the hit chains
     """
 
+    #Align the search and target seqs to get matching CA regions
+    
     #Structural superposition of the search and target (hit) CA coords
+    sup = SVDSuperimposer()
+
+    sup.set(search_CA_coords, target_CA_coords) #(reference_coords, coords)
+    sup.run()
+    rot, tran = sup.get_rotran()
+    #Rotate the seed coords to match the centre of mass calc
+    rotated_target_coords = np.dot(target_CA_coords, rot) + tran
+    rotated_seed_coords = np.dot(seed_CA_coords, rot) + tran
+    rotated_CM =  np.sum(rotated_seed_coords,axis=0)/(rotated_seed_coords.shape[0])
+    pdb.set_trace()
 
 def write_seeds_for_design(seed_df, search_structure, mmcifdir, min_contacts_per_pos=1):
     """Write seeds that differ in COM towards the target more than X Å
