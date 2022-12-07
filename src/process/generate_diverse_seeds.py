@@ -4,6 +4,7 @@ import numpy as np
 from Bio.PDB import MMCIFParser, PDBParser
 from collections import Counter
 from Bio.SVDSuperimposer import SVDSuperimposer
+from Bio import pairwise2
 import pdb
 
 
@@ -194,18 +195,34 @@ def calc_COM(search_CA_coords, search_seq, target_CA_coords, target_seq, seed_CA
     """
 
     #Align the search and target seqs to get matching CA regions
-    
+    alignment = pairwise2.align.globalxx(search_seq, target_seq)[0]
+    search_aln, target_aln = alignment[0], alignment[1]
+    #Go through the alignment and get the matching pos
+    keep_search, keep_target = [], []
+    si, ti = 0, 0 #Keep track of the indices
+    for i in range(len(search_aln)):
+
+        if (search_aln[i]!='-') and (target_aln[i]!='-'):
+            keep_search.append(si)
+            keep_target.append(ti)
+        if search_aln[i]!='-':
+            si+=1
+        if target_aln[i]!='-':
+            ti+=1
+
     #Structural superposition of the search and target (hit) CA coords
     sup = SVDSuperimposer()
 
-    sup.set(search_CA_coords, target_CA_coords) #(reference_coords, coords)
+    sup.set(search_CA_coords[keep_search], target_CA_coords[keep_target]) #(reference_coords, coords)
     sup.run()
     rot, tran = sup.get_rotran()
     #Rotate the seed coords to match the centre of mass calc
     rotated_target_coords = np.dot(target_CA_coords, rot) + tran
     rotated_seed_coords = np.dot(seed_CA_coords, rot) + tran
     rotated_CM =  np.sum(rotated_seed_coords,axis=0)/(rotated_seed_coords.shape[0])
-    pdb.set_trace()
+
+    return rotated_target_coords, rotated_seed_coords, rotated_CM
+
 
 def write_seeds_for_design(seed_df, search_structure, mmcifdir, min_contacts_per_pos=1):
     """Write seeds that differ in COM towards the target more than X Å
@@ -223,6 +240,7 @@ def write_seeds_for_design(seed_df, search_structure, mmcifdir, min_contacts_per
     search_seq = ''.join(search_seqs[search_chain][np.argwhere(search_atoms[search_chain]=='CA')[:,0]])
 
     #Go through the possible seeds and calculate their COM
+    targets , seeds, COMs = [], [], []
     for ind, row in seed_df.iterrows():
         #Read the chains
         seed_coords, seed_seqs, seed_atoms, seed_resnos = read_pdb(mmcifdir+row.PDB_ID+'.cif')
@@ -231,7 +249,8 @@ def write_seeds_for_design(seed_df, search_structure, mmcifdir, min_contacts_per
         seed_CA_coords = seed_coords[row.seed_chain][np.argwhere(seed_atoms[row.seed_chain]=='CA')[:,0]][row.cs:row.ce+1]
         seed_seq = ''.join(seed_seqs[row.seed_chain][np.argwhere(seed_atoms[row.seed_chain]=='CA')[:,0]])[row.cs:row.ce+1]
         #Get the COM
-        calc_COM(search_CA_coords, search_seq, target_CA_coords, target_seq, seed_CA_coords)
+        rotated_target_coords, rotated_seed_coords, rotated_CM = calc_COM(search_CA_coords, search_seq, target_CA_coords, target_seq, seed_CA_coords)
+        #Save
         pdb.set_trace()
 
 ############################MAIN#############################
