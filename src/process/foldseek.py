@@ -187,12 +187,14 @@ def get_interaction_seeds(pdb_ids, pdb_chains, mmcifdir, min_len, max_len, outdi
     return seed_df
 
 
-def calc_COM():
+def calc_COM(search_CA_coords, search_seq, target_CA_coords, target_seq, seed_CA_coords):
     """Calculate the COM for a seed after aligning the CAs
     of the search structure and the hit chains
     """
 
-def write_seeds_for_design(seed_df, search_structure, min_contacts_per_pos=1):
+    #Structural superposition of the search and target (hit) CA coords
+
+def write_seeds_for_design(seed_df, search_structure, mmcifdir, min_contacts_per_pos=1):
     """Write seeds that differ in COM towards the target more than X Å
     """
     #Select seeds
@@ -206,20 +208,31 @@ def write_seeds_for_design(seed_df, search_structure, min_contacts_per_pos=1):
     #Get the CA coords
     search_CA_coords = search_coords[search_chain][np.argwhere(search_atoms[search_chain]=='CA')[:,0]]
     search_seq = ''.join(search_seqs[search_chain][np.argwhere(search_atoms[search_chain]=='CA')[:,0]])
-    pdb.set_trace()
+
+    #Go through the possible seeds and calculate their COM
+    for ind, row in seed_df.iterrows():
+        #Read the chains
+        seed_coords, seed_seqs, seed_atoms, seed_resnos = read_pdb(mmcifdir+row.PDB_ID+'.cif')
+        target_CA_coords = seed_coords[row.target_chain][np.argwhere(seed_atoms[row.target_chain]=='CA')[:,0]]
+        target_seq = ''.join(seed_seqs[row.target_chain][np.argwhere(seed_atoms[row.target_chain]=='CA')[:,0]])
+        seed_CA_coords = seed_coords[row.seed_chain][np.argwhere(seed_atoms[row.seed_chain]=='CA')[:,0]][row.cs:row.ce+1]
+        seed_seq = ''.join(seed_seqs[row.seed_chain][np.argwhere(seed_atoms[row.seed_chain]=='CA')[:,0]])[row.cs:row.ce+1]
+        #Get the COM
+        calc_COM(search_CA_coords, search_seq, target_CA_coords, target_seq, seed_CA_coords)
+        pdb.set_trace()
 
 ############################MAIN#############################
 #Process
 aln_seqs, pdb_ids, pdb_chains = parse_results('../../data/Foldseek_results/')
 #write_ids_for_download(pdb_ids, '../../data/Foldseek_results/mmcif/ids.txt')
 #Get seeds
-mmcfdir = '../../data/Foldseek_results/mmcif/'
+mmcifdir = '../../data/Foldseek_results/mmcif/'
 outdir = '../../data/Foldseek_results/mmcif/seeds/'
 min_len, max_len = 10, 50
 try:
     seed_df = pd.read_csv(outdir+'seed_df.csv')
 except:
     pdb.set_trace()
-    seed_df = get_interaction_seeds(pdb_ids, pdb_chains, mmcfdir, min_len, max_len, outdir)
+    seed_df = get_interaction_seeds(pdb_ids, pdb_chains, mmcifdir, min_len, max_len, outdir)
 #Pick seeds based on contact density and COM diff (avoid repetitive seeds)
-write_seeds_for_design(seed_df, '../../data/3SQG_C.pdb', min_contacts_per_pos=1)
+write_seeds_for_design(seed_df, '../../data/3SQG_C.pdb', mmcifdir, min_contacts_per_pos=1)
