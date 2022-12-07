@@ -340,7 +340,7 @@ def write_seeds_for_design(seed_df, search_structure, mmcifdir, outdir, min_cont
     for ind, row in seed_df.iterrows():
         if ind>0:
             #Check COMs
-            prev_COMs = seed_df.COM.values[:ind-1]
+            prev_COMs = seed_df.COM.values[:ind]
             #Get diff
             delta_COM = np.array([x for x in prev_COMs])-row.COM
             delta_COM = np.sqrt(np.sum(delta_COM**2,axis=1))
