@@ -9,6 +9,38 @@ import pdb
 
 
 ##########Parse Foldseek results###########
+def write_input_pdb(chain_coords, chain_seq, chain_atoms, chain_resnos, chain, outname):
+    """Write a PDB file of the seeds
+    """
+
+    one_to_three = {'R':'ARG', 'H':'HIS', 'K':'LYS', 'D':'ASP', 'E':'GLU', 'S':'SER', 'T':'THR',
+                    'N':'ASN', 'Q':'GLN', 'C':'CYS', 'G':'GLY', 'P':'PRO', 'A':'ALA', 'I':'ILE',
+                    'L':'LEU', 'M':'MET', 'F':'PHE', 'W':'TRP', 'Y':'TYR', 'V':'VAL', 'U':'SEC',
+                    'O':'PYL', 'X':'GLX', 'X':'UNK'}
+
+    with open(outname, 'w') as file:
+        #Write chain 1
+        atmno=1
+        for i in range(len(chain_coords)):
+            x,y,z = chain_coords[i]
+            x,y,z = str(np.round(x,3)), str(np.round(y,3)), str(np.round(z,3))
+            file.write(format_line(str(atmno), chain_atoms[i], one_to_three[chain_seq[i]],
+            chain, str(chain_resnos[i]), x,y,z, '1.00','100', chain_atoms[i][0])+'\n')
+            atmno+=1
+
+
+def prepare_input(pdbfile, chain, outdir, pdbid):
+    """Parse the PDB file and write the intended chain
+    """
+
+    #Read
+    model_coords, model_seqs, model_atoms, model_resnos = read_pdb(pdbfile)
+
+    #Write the selected chain
+    write_input_pdb(model_coords[chain], model_seqs[chain], model_atoms[chain], model_resnos[chain], chain, outdir+pdbid+'_'+chain+'.pdb')
+
+
+
 def parse_results(results_dir, db='pdb100'):
     """Parse the foldseek results
     """
