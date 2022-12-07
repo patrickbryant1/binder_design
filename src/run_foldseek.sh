@@ -4,10 +4,11 @@ SEARCH_STRUCURE=../data/3SQG_C.pdb
 
 #Parse
 MMCIFDIR=../data/Foldseek_results/mmcif/
-mkdir $MMCIFDIR
+#mkdir $MMCIFDIR
 
 #Download pdb files
-bash ./process/batch_download.sh -f $MMCIFDIR/ids.txt -c -o $MMCIFDIR
+#bash ./process/batch_download.sh -f $MMCIFDIR/ids.txt -c -o $MMCIFDIR
 #Unzip
-gunzip $MMCIFDIR/*.gz
+#gunzip $MMCIFDIR/*.gz
 #Parse the mmcif files towards the interacting chains
+mkdir $MMCIFDIR/seeds/
