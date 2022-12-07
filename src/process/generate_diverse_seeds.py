@@ -189,7 +189,9 @@ def get_interaction_seeds(pdb_ids, pdb_chains, mmcifdir, min_len, max_len, outdi
     return seed_df
 
 
-def calc_COM(search_CA_coords, search_seq, target_CA_coords, target_seq, seed_CA_coords):
+def calc_COM(search_CA_coords, search_seq,
+        target_N_coords, target_CA_coords, target_C_coords, target_seq,
+        seed_N_coords, seed_CA_coords, seed_C_coords):
     """Calculate the COM for a seed after aligning the CAs
     of the search structure and the hit chains
     """
@@ -216,15 +218,77 @@ def calc_COM(search_CA_coords, search_seq, target_CA_coords, target_seq, seed_CA
     sup.set(search_CA_coords[keep_search], target_CA_coords[keep_target]) #(reference_coords, coords)
     sup.run()
     rot, tran = sup.get_rotran()
-    #Rotate the seed coords to match the centre of mass calc
-    rotated_target_coords = np.dot(target_CA_coords, rot) + tran
-    rotated_seed_coords = np.dot(seed_CA_coords, rot) + tran
-    rotated_CM =  np.sum(rotated_seed_coords,axis=0)/(rotated_seed_coords.shape[0])
+    #Rotate the coords to match for the centre of mass calc
+    rotated_target_N_coords = np.dot(target_N_coords, rot) + tran
+    rotated_target_CA_coords = np.dot(target_CA_coords, rot) + tran
+    rotated_target_C_coords = np.dot(target_C_coords, rot) + tran
+    rotated_seed_N_coords = np.dot(seed_N_coords, rot) + tran
+    rotated_seed_CA_coords = np.dot(seed_CA_coords, rot) + tran
+    rotated_seed_C_coords = np.dot(seed_C_coords, rot) + tran
+    rotated_CM =  np.sum(rotated_seed_CA_coords,axis=0)/(rotated_seed_CA_coords.shape[0])
+    #Cat
+    rotated_target_coords = np.concatenate([np.expand_dims(rotated_target_N_coords,axis=1), np.expand_dims(rotated_target_CA_coords,axis=1), np.expand_dims(rotated_target_C_coords,axis=1)],axis=1)
+    rotated_seed_coords = np.concatenate([np.expand_dims(rotated_seed_N_coords,axis=1), np.expand_dims(rotated_seed_CA_coords,axis=1), np.expand_dims(rotated_seed_C_coords,axis=1)],axis=1)
 
     return rotated_target_coords, rotated_seed_coords, rotated_CM
 
+def format_line(atm_no, atm_name, res_name, chain, res_no, x,y,z,occ,B,atm_id):
+    '''Format the line into PDB
+    '''
 
-def write_seeds_for_design(seed_df, search_structure, mmcifdir, min_contacts_per_pos=1):
+    #Get blanks
+    atm_no = ' '*(5-len(atm_no))+atm_no
+    atm_name = atm_name+' '*(4-len(atm_name))
+    res_no = ' '*(4-len(res_no))+res_no
+    x =' '*(8-len(x))+x
+    y =' '*(8-len(y))+y
+    z =' '*(8-len(z))+z
+    occ = ' '*(6-len(occ))+occ
+    B = ' '*(6-len(B))+B
+
+    line = 'ATOM  '+atm_no+'  '+atm_name+res_name+' '+chain+res_no+' '*4+x+y+z+occ+B+' '*11+atm_id+'  '
+    return line
+
+def write_pdb(target_coords, target_seq, seed_coords, seed_seq, outname):
+    """Write a PDB file of the seeds
+    """
+
+    one_to_three = {'R':'ARG', 'H':'HIS', 'K':'LYS', 'D':'ASP', 'E':'GLU', 'S':'SER', 'T':'THR',
+                    'N':'ASN', 'Q':'GLN', 'C':'CYS', 'G':'GLY', 'P':'PRO', 'A':'ALA', 'I':'ILE',
+                    'L':'LEU', 'M':'MET', 'F':'PHE', 'W':'TRP', 'Y':'TYR', 'V':'VAL', 'U':'SEC',
+                    'O':'PYL', 'X':'GLX', 'X':'UNK'}
+
+    with open(outname, 'w') as file:
+        atmno, resno = 1, 1
+        #Write chain 1
+        chain='A'
+        for i in range(len(target_coords)):
+            ai=0
+            for atom in ['N', 'CA', 'C']:
+                x,y,z = target_coords[i,ai]
+                x,y,z = str(np.round(x,3)), str(np.round(y,3)), str(np.round(z,3))
+                file.write(format_line(str(atmno), atom, one_to_three[target_seq[resno-1]],
+                chain, str(resno), x,y,z, '1.00','100',atom[0])+'\n')
+                atmno+=1
+                ai+=1 #Atom index
+
+            resno+=1
+        #Write chain 2
+        chain='B'
+        resno=1
+        for i in range(len(seed_coords)):
+            ai=0
+            for atom in ['N', 'CA', 'C']:
+                x,y,z = seed_coords[i,ai]
+                x,y,z = str(np.round(x,3)), str(np.round(y,3)), str(np.round(z,3))
+                file.write(format_line(str(atmno), atom, one_to_three[seed_seq[resno-1]],
+                chain, str(resno), x, y, z, '1.00','100',atom[0])+'\n')
+                atmno+=1
+                ai+=1 #Atom index
+
+
+
+def write_seeds_for_design(seed_df, search_structure, mmcifdir, outdir, min_contacts_per_pos=1, COM_min_dist=2):
     """Write seeds that differ in COM towards the target more than X Å
     """
     #Select seeds
@@ -240,19 +304,53 @@ def write_seeds_for_design(seed_df, search_structure, mmcifdir, min_contacts_per
     search_seq = ''.join(search_seqs[search_chain][np.argwhere(search_atoms[search_chain]=='CA')[:,0]])
 
     #Go through the possible seeds and calculate their COM
-    targets , seeds, COMs = [], [], []
+    targets, t_seqs, seeds, s_seqs, COMs = [], [], [], [], []
     for ind, row in seed_df.iterrows():
         #Read the chains
         seed_coords, seed_seqs, seed_atoms, seed_resnos = read_pdb(mmcifdir+row.PDB_ID+'.cif')
+        #Target
+        target_N_coords = seed_coords[row.target_chain][np.argwhere(seed_atoms[row.target_chain]=='N')[:,0]]
         target_CA_coords = seed_coords[row.target_chain][np.argwhere(seed_atoms[row.target_chain]=='CA')[:,0]]
+        target_C_coords = seed_coords[row.target_chain][np.argwhere(seed_atoms[row.target_chain]=='C')[:,0]]
         target_seq = ''.join(seed_seqs[row.target_chain][np.argwhere(seed_atoms[row.target_chain]=='CA')[:,0]])
+        #Seed
+        seed_N_coords = seed_coords[row.seed_chain][np.argwhere(seed_atoms[row.seed_chain]=='N')[:,0]][row.cs:row.ce+1]
         seed_CA_coords = seed_coords[row.seed_chain][np.argwhere(seed_atoms[row.seed_chain]=='CA')[:,0]][row.cs:row.ce+1]
+        seed_C_coords = seed_coords[row.seed_chain][np.argwhere(seed_atoms[row.seed_chain]=='C')[:,0]][row.cs:row.ce+1]
         seed_seq = ''.join(seed_seqs[row.seed_chain][np.argwhere(seed_atoms[row.seed_chain]=='CA')[:,0]])[row.cs:row.ce+1]
         #Get the COM
-        rotated_target_coords, rotated_seed_coords, rotated_CM = calc_COM(search_CA_coords, search_seq, target_CA_coords, target_seq, seed_CA_coords)
+        rotated_target_coords, rotated_seed_coords, rotated_CM = calc_COM(search_CA_coords, search_seq,
+                                                                        target_N_coords, target_CA_coords, target_C_coords, target_seq,
+                                                                        seed_N_coords, seed_CA_coords, seed_C_coords)
         #Save
-        pdb.set_trace()
+        targets.append(rotated_target_coords)
+        t_seqs.append(target_seq)
+        seeds.append(rotated_seed_coords)
+        s_seqs.append(seed_seq)
+        COMs.append(rotated_CM)
 
+    #Add COM to dfrow.PDB_ID
+    seed_df['COM']=COMs
+    seed_df['target_coords']=targets
+    seed_df['target_seq']=t_seqs
+    seed_df['seed_cords']=seeds
+    seed_df['seed_seq']=s_seqs
+    #Pick seeds with highest contact densities and delta COM >2
+    seed_no = 1
+    for ind, row in seed_df.iterrows():
+        if ind>0:
+            #Check COMs
+            prev_COMs = seed_df.COM.values[:ind-1]
+            #Get diff
+            delta_COM = np.array([x for x in prev_COMs])-row.COM
+            delta_COM = np.sqrt(np.sum(delta_COM**2,axis=1))
+            if np.argwhere(delta_COM<=COM_min_dist).shape[0]>0:
+                print(min(delta_COM))
+                continue
+
+        #Write the seed
+        write_pdb(row.target_coords, row.target_seq, row.seed_cords, row.seed_seq, outdir+'seed_'+str(seed_no)+'.pdb')
+        seed_no+=1
 ############################MAIN#############################
 #Process
 aln_seqs, pdb_ids, pdb_chains = parse_results('../../data/Foldseek_results/')
@@ -267,4 +365,4 @@ except:
     pdb.set_trace()
     seed_df = get_interaction_seeds(pdb_ids, pdb_chains, mmcifdir, min_len, max_len, outdir)
 #Pick seeds based on contact density and COM diff (avoid repetitive seeds)
-write_seeds_for_design(seed_df, '../../data/3SQG_C.pdb', mmcifdir, min_contacts_per_pos=1)
+write_seeds_for_design(seed_df, '../../data/3SQG_C.pdb', mmcifdir, outdir, min_contacts_per_pos=1, COM_min_dist=2)
