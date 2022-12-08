@@ -16,6 +16,7 @@ dependencies:
   - conda-forge::hydra-core
   - conda-forge::pandas
   - conda-forge::pytest
+  - conda-forge::torchsparse
   - bioconda::hmmer==3.3.2
   - bioconda::hhsuite==3.3.0
   - bioconda::kalign2==2.04
@@ -33,4 +34,5 @@ dependencies:
       - typing-extensions==3.10.0.2
       - pytorch_lightning==1.5.10
       - wandb==0.12.21
+      - torch_sparse
       - git+https://github.com/NVIDIA/dllogger.git
