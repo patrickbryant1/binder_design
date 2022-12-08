@@ -9,14 +9,6 @@ from Bio.PDB.PDBParser import PDBParser
 import time
 import pdb
 
-parser = argparse.ArgumentParser(description = '''Parse PDB files and get interacting chains.''')
-
-parser.add_argument('--crop_df', nargs=1, type= str, default=sys.stdin, help = 'Path to csv with crops of interacting chains.')
-parser.add_argument('--n_seqs_per_crop', nargs=1, type= int, default=sys.stdin, help = 'How many sequences to generate per crop.')
-parser.add_argument('--structure', nargs=1, type= str, default=sys.stdin, help = 'Path to PDB file.')
-parser.add_argument('--temperature', nargs=1, type= float, default=sys.stdin, help = 'Temperature for sequence sampling.')
-parser.add_argument('--crop_len', nargs=1, type= int, default=sys.stdin, help = 'What crop length to use.')
-parser.add_argument('--outname', nargs=1, type= str, default=sys.stdin, help = 'Path to output directory. Include /in end')
 
 ##############FUNCTIONS##############
 def read_pdb(pdbname):
@@ -78,10 +70,12 @@ def load_model():
     model = model.eval()
     return model
 
-def design_seqs(crop_df, n_seqs_per_crop, ch1_coords, ch2_coords, ch1_atoms, ch2_atoms, ch1_seq, ch2_seq, model=None, t=1e-6, crop_len=0):
+def design_seqs(n_seqs_per_seed, ch1_coords, ch2_coords, ch1_atoms, ch2_atoms, ch1_seq, ch2_seq, model=None, t=1e-6, crop_len=0):
     """Design seqs for the provided coords
     """
 
+    #Load the model
+    model = load_model()
     #Get the backbone coords (3x3 matrix for each residue; N, CA, C coords
     N, CA, C = ch1_coords[np.argwhere(ch1_atoms=='N')[:,0]], ch1_coords[np.argwhere(ch1_atoms=='CA')[:,0]], ch1_coords[np.argwhere(ch1_atoms=='C')[:,0]]
     ch1_bb_coords = np.concatenate([np.expand_dims(N,1), np.expand_dims(CA,1), np.expand_dims(C,1)], axis=1)
@@ -98,10 +92,6 @@ def design_seqs(crop_df, n_seqs_per_crop, ch1_coords, ch2_coords, ch1_atoms, ch2
     ch2_seq = [three_to_one[x] for x in ch2_seq]
     ch2_seq = ''.join(ch2_seq)
 
-    #Select crops
-    crop_df['Length']=crop_df.ce-crop_df.cs
-    if crop_len>0:
-        crop_df = crop_df[crop_df.Length==crop_len]
 
     #Create a span of masked residues:
     #To partially mask backbone coordinates, simply set the masked coordinates to np.inf.
@@ -111,65 +101,25 @@ def design_seqs(crop_df, n_seqs_per_crop, ch1_coords, ch2_coords, ch1_atoms, ch2
     #Go through the crops
     designed_receptor_seq, designed_binder_seq = [], []
     native_receptor_seq, native_binder_seq = [], []
-    for ind, row in crop_df.iterrows():
-        #The design chain is put second with a 10 residue masked region in btw the target
-        #The reason for this is to avoid excessive methionines
-        #Design towards chain B - crop A
-        if row.Chain=='A':
-            design_coords = np.concatenate([ch2_bb_coords, gap, ch1_bb_coords[row.cs:row.ce]])
-            native_rsec, native_bseq = ch2_seq, ch1_seq
-        #Design towards chain A - crop B
-        else:
-            design_coords = np.concatenate([ch1_bb_coords, gap, ch2_bb_coords[row.cs:row.ce]])
-            native_rsec, native_bseq = ch1_seq, ch2_seq
-
-        designed_receptor_seq_crop, designed_binder_seq_crop = [], []
-        native_receptor_seq_crop, native_binder_seq_crop = [], []
-        for i in range(n_seqs_per_crop):
-            #Run ESM-IF1
-            t0 = time.time()
-            sampled_seq = model.sample(np.array(design_coords, dtype=np.float32), temperature=t)
-            t1 = time.time()
-            design_size = row.ce-row.cs
-            print('Sampling took', t1-t0, 's for a size of', design_size+len(native_rsec))
-            #Design
-            designed_receptor_seq_crop.append(sampled_seq[:-(design_size+gap.shape[0])])
-            designed_binder_seq_crop.append(sampled_seq[-design_size:])
-            #Native
-            native_receptor_seq_crop.append(native_rsec)
-            native_binder_seq_crop.append(native_bseq[row.cs:row.ce])
-        #Save all samples
-        designed_receptor_seq.append('-'.join(designed_receptor_seq_crop))
-        designed_binder_seq.append('-'.join(designed_binder_seq_crop))
-        #Native
-        native_receptor_seq.append('-'.join(native_receptor_seq_crop))
-        native_binder_seq.append('-'.join(native_binder_seq_crop))
+    #The design chain is put second with a 10 residue masked region in btw the target
+    #The reason for this is to avoid excessive methionines
+    #Design towards chain A - crop B
+    design_coords = np.concatenate([ch1_bb_coords, gap, ch2_bb_coords])
+    native_rsec, native_bseq = ch1_seq, ch2_seq
+    design_size = len(ch2_seq)
+    #Loop and design
+    designed_binder_seq = []
+    for i in range(n_seqs_per_seed):
+        #Run ESM-IF1
+        t0 = time.time()
+        sampled_seq = model.sample(np.array(design_coords, dtype=np.float32), temperature=t)
+        t1 = time.time()
+        print('Sampling took', t1-t0, 's for a size of', len(ch1_seq)+len(ch2_seq)+len(gap))
+        #Design
+        designed_binder_seq.append(sampled_seq[-design_size:])
 
     #Add to df
-    crop_df['designed_receptor_seq']=designed_receptor_seq
-    crop_df['native_receptor_seq']=native_receptor_seq
-    crop_df['designed_binder_seq']=designed_binder_seq
-    crop_df['native_binder_seq']=native_binder_seq
+    design_df = pd.DataFrame()
+    design_df['designed_binder_seq']=designed_binder_seq
 
-    return crop_df
-##################MAIN#######################
-
-#Parse args
-args = parser.parse_args()
-#Data
-crop_df = pd.read_csv(args.crop_df[0])
-n_seqs_per_crop = args.n_seqs_per_crop[0]
-model_coords, model_seqs, model_atoms, model_resnos = read_pdb(args.structure[0])
-temperature = args.temperature[0]
-crop_len = args.crop_len[0]
-outname = args.outname[0]
-#Get model
-model = load_model()
-#Design seqs
-crop_df = design_seqs(crop_df, n_seqs_per_crop, model_coords['A'], model_coords['B'],
-            model_atoms['A'], model_atoms['B'],
-            model_seqs['A'], model_seqs['B'],
-            model, temperature, crop_len)
-
-#Save
-crop_df.to_csv(outname, index=None)
+    return design_df

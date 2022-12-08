@@ -377,7 +377,7 @@ def write_seeds_for_design(seed_df, search_structure, mmcifdir, outdir, min_cont
             delta_COM = np.array([x for x in prev_COMs])-row.COM
             delta_COM = np.sqrt(np.sum(delta_COM**2,axis=1))
             if np.argwhere(delta_COM<=COM_min_dist).shape[0]>0:
-                print(min(delta_COM))
+                #print(min(delta_COM))
                 continue
 
         #Write the seed
