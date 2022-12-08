@@ -16,7 +16,7 @@ dependencies:
   - conda-forge::hydra-core
   - conda-forge::pandas
   - conda-forge::pytest
-  - conda-forge::torchsparse
+  - conda-forge::pytorch_sparse
   - bioconda::hmmer==3.3.2
   - bioconda::hhsuite==3.3.0
   - bioconda::kalign2==2.04
