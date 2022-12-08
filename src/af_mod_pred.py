@@ -49,41 +49,6 @@ import pdb
 # Internal import (7716).
 
 ##### flags #####
-flags.DEFINE_string('receptor_fasta_path', None,
-    'Paths to FASTA file for receptor'
-    'basename is used to name the output directories for '
-    'each prediction.')
-
-flags.DEFINE_list('model_names', None,
-    'Comma separated list of different MSA sampling schemes to use; '
-    'look at config for available options; will generate one output '
-    'for each specified scheme.')
-
-flags.DEFINE_string('output_dir', None,
-    'Path to a directory that will store the results.')
-
-flags.DEFINE_integer('max_recycles', 1,
-    'Number of recyles through the model')
-
-flags.DEFINE_list('msas', None,
-    'Comma separated list of msa paths')
-
-flags.DEFINE_integer('random_seed', None,
-    'The random seed for the data pipeline. By default, this is randomly generated. '
-    'Note that even if this is set, Alphafold may still not be deterministic, '
-    'because processes like GPU inference are nondeterministic.')
-
-flags.DEFINE_string('peptide_sequences', None,
-    'Peptide sequences to predict.')
-
-flags.DEFINE_string('target_id', None,
-    'ID of design target.')
-
-##### databases flags #####
-flags.DEFINE_string('data_dir', None,
-    'Path to directory of supporting data.')
-
-FLAGS = flags.FLAGS
 
 ############FUNCTIONS###########
 def update_features(feature_dict, peptide_sequence):
@@ -250,56 +215,40 @@ def predict_binder(
     save_design(unrelaxed_protein, output_dir_base, target_id+'_'+str(n_preds), feature_dict['seq_length'][0])
 
 ######################MAIN###########################
-def main(argv):
 
-  #Use a single ensemble
-  num_ensemble = 1
+def run_preds(receptor_fasta_path, num_ensemble, max_recycles, data_dir, peptide_sequences, output_dir, target_id):
+    """Run the predictions
+    """
 
-  # Check for duplicate FASTA file names.
-  fasta_name = pathlib.Path(FLAGS.receptor_fasta_path).stem
+    #Use a single ensemble
+    num_ensemble = 1
 
-  data_pipeline = foldonly.FoldDataPipeline()
-  model_runners = {}
-  for model_name in FLAGS.model_names:
+    # Check for duplicate FASTA file names.
+    fasta_name = pathlib.Path(receptor_fasta_path).stem
 
-    model_config = config.model_config(model_name)
+    data_pipeline = foldonly.FoldDataPipeline()
+    model_runners = {}
+    model_config = config.model_config('model_1')
     model_config.data.eval.num_ensemble = num_ensemble
-    model_config.data.common.num_recycle = FLAGS.max_recycles
-    model_config.model.num_recycle = FLAGS.max_recycles
-    model_params = data.get_model_haiku_params(
-          model_name=model_name, data_dir=FLAGS.data_dir)
+    model_config.data.common.num_recycle = max_recycles
+    model_config.model.num_recycle = max_recycles
+    model_params = data.get_model_haiku_params(model_name=model_name, data_dir=data_dir)
     model_runner = model.RunModel(model_config, model_params)
     model_runners[model_name] = model_runner
 
-  logging.info('Have %d models: %s', len(model_runners),
+    logging.info('Have %d models: %s', len(model_runners),
                  list(model_runners.keys()))
-  amber_relaxer = None
-
-  random_seed = FLAGS.random_seed
-  if random_seed is None:
+    amber_relaxer = None
+    #Seed
     random_seed = random.randrange(sys.maxsize)
-  logging.info('Using random seed %d for the data pipeline', random_seed)
+    logging.info('Using random seed %d for the data pipeline', random_seed)
 
-  #Get the peptide sequences
-  peptide_sequences = FLAGS.peptide_sequences.split('-')
-  # Predict structure for each of the sequences.
-  predict_binder(
-        fasta_path=FLAGS.receptor_fasta_path,
-        fasta_name=fasta_name,
-        output_dir_base=FLAGS.output_dir,
-        data_pipeline=data_pipeline,
-        random_seed=random_seed,
-        model_runners=model_runners,
-        peptide_sequences=peptide_sequences,
-        target_id=FLAGS.target_id)
-
-
-if __name__ == '__main__':
-  flags.mark_flags_as_required([
-      'receptor_fasta_path',
-      'output_dir',
-      'model_names',
-      'data_dir'
-  ])
-
-  app.run(main)
+    # Predict structure for each of the sequences.
+    predict_binder(fasta_path=receptor_fasta_path,
+                    fasta_name=fasta_name,
+                    output_dir_base=output_dir,
+                    data_pipeline=data_pipeline,
+                    random_seed=random_seed,
+                    model_runners=model_runners,
+                    peptide_sequences=peptide_sequences,
+                    target_id=target_id)
