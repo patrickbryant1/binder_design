@@ -33,12 +33,21 @@ def make_aln(query_seq, results_dir, eval_t=0.001):
         if len(df)<1:
             continue
         #Add the hit to the alignment - column 15
+        #Cols 14 and 15 are the pairwise aln btw the query and hit.
+        #Both of these can contain gaps. If there are gaps in the query - these are insertions and should be removed
         #Add according to: 6,7; qstart,qend. qstart is the start pos
-        qstart, qend, tstart, tend, hits = df[6].values, df[7].values, df[8].values, df[9].values, df[15].values
+        qstart, qend, tstart, tend, query_alns, hit_alns = df[6].values, df[7].values, df[8].values, df[9].values, df[14].values, df[15].values
         for i in range(len(qstart)):
-            qs_i = qstart[i]-1
-            remainder = query_len-qend[i]
-            hit_aln = hits[i][tstart[i]-1:tend[i]]
+            qs_i, qe_i, qaln = qstart[i]-1, qend[i], query_alns[i]
+            if '-' in qaln:
+                #Get the insertions and remove them from the hit aln
+                insertions = np.argwhere(np.array([x for x in qaln])=='-')[:,0]
+                keep_pos = np.setdiff1d(np.arange(len(qaln)),insertions)
+                hit_aln = ''.join(np.array([x for x in hit_alns[i]])[keep_pos])
+            else:
+                hit_aln = hit_alns[i]
+
+            remainder = query_len-qe_i
             aln_seq = '-'*qs_i+hit_aln+'-'*remainder
             if len(aln_seq)!=query_len:
                 print('mismatch!')
