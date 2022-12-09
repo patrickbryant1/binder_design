@@ -27,7 +27,10 @@ def make_aln(query_seq, results_dir, eval_t=0.001):
     aln = [query_seq]
     query_len = len(query_seq)
     for hitname in hits:
-        df = pd.read_csv(hitname, sep='\t', header=None)
+        try:
+            df = pd.read_csv(hitname, sep='\t', header=None)
+        except:
+            continue
         #Column 10 is the eval
         df = df[df[10]<eval_t]
         if len(df)<1:
@@ -55,7 +58,7 @@ def make_aln(query_seq, results_dir, eval_t=0.001):
             else:
                 aln.append(aln_seq)
 
-        pdb.set_trace()
+    pdb.set_trace()
 
 
 
