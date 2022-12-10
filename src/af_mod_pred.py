@@ -47,6 +47,8 @@ from collections import defaultdict
 import glob
 import pdb
 # Internal import (7716).
+import haiku as hk
+hk.vmap.require_split_rng = False
 
 ##### flags #####
 
