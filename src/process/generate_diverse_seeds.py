@@ -196,23 +196,26 @@ def get_interaction_seeds(pdb_ids, pdb_chains, mmcifdir, min_len, max_len, outdi
         for seed_chain in seed_chains:
             #Get the interacting residues
             #Intres 2 are all interactions with the target chain from the seed chain
-            intres2 = get_intres(model_coords[target_chain], model_coords[seed_chain],
-                                        model_resnos[target_chain], model_resnos[seed_chain],
-                                        model_atoms[target_chain], model_atoms[seed_chain])
-            #Check
-            if len(intres2)>0:
-                crop_df = crop(intres2, model_resnos[seed_chain], croplens)
-                #Get the best crop
-                best_crops = crop_df[crop_df.contacts==crop_df.contacts.max()]
-                best_crop = best_crops[best_crops.croplen==best_crops.croplen.min()]
-                #Save
-                possible_seeds['PDB_ID'].append(pdb_ids[i])
-                possible_seeds['target_chain'].append(target_chain)
-                possible_seeds['seed_chain'].append(seed_chain)
-                possible_seeds['contacts'].append(best_crop.contacts.values[0])
-                possible_seeds['cs'].append(best_crop.cs.values[0])
-                possible_seeds['ce'].append(best_crop.ce.values[0])
-                possible_seeds['croplen'].append(best_crop.croplen.values[0])
+            try:
+                intres2 = get_intres(model_coords[target_chain], model_coords[seed_chain],
+                                            model_resnos[target_chain], model_resnos[seed_chain],
+                                            model_atoms[target_chain], model_atoms[seed_chain])
+                #Check
+                if len(intres2)>0:
+                    crop_df = crop(intres2, model_resnos[seed_chain], croplens)
+                    #Get the best crop
+                    best_crops = crop_df[crop_df.contacts==crop_df.contacts.max()]
+                    best_crop = best_crops[best_crops.croplen==best_crops.croplen.min()]
+                    #Save
+                    possible_seeds['PDB_ID'].append(pdb_ids[i])
+                    possible_seeds['target_chain'].append(target_chain)
+                    possible_seeds['seed_chain'].append(seed_chain)
+                    possible_seeds['contacts'].append(best_crop.contacts.values[0])
+                    possible_seeds['cs'].append(best_crop.cs.values[0])
+                    possible_seeds['ce'].append(best_crop.ce.values[0])
+                    possible_seeds['croplen'].append(best_crop.croplen.values[0])
+            except:
+                continue
 
     #Create df
     seed_df = pd.DataFrame.from_dict(possible_seeds)
