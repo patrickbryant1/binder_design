@@ -261,9 +261,13 @@ def calc_COM(search_CA_coords, search_seq,
     rotated_seed_CA_coords = np.dot(seed_CA_coords, rot) + tran
     rotated_seed_C_coords = np.dot(seed_C_coords, rot) + tran
     rotated_CM =  np.sum(rotated_seed_CA_coords,axis=0)/(rotated_seed_CA_coords.shape[0])
+
+    #Some coords may be missing - get min
+    min_target = min(len(rotated_target_N_coords),len(rotated_target_CA_coords), len(rotated_target_C_coords))
+    min_seed = min(len(rotated_seed_N_coords),len(rotated_seed_CA_coords), len(rotated_seed_C_coords))
     #Cat
-    rotated_target_coords = np.concatenate([np.expand_dims(rotated_target_N_coords,axis=1), np.expand_dims(rotated_target_CA_coords,axis=1), np.expand_dims(rotated_target_C_coords,axis=1)],axis=1)
-    rotated_seed_coords = np.concatenate([np.expand_dims(rotated_seed_N_coords,axis=1), np.expand_dims(rotated_seed_CA_coords,axis=1), np.expand_dims(rotated_seed_C_coords,axis=1)],axis=1)
+    rotated_target_coords = np.concatenate([np.expand_dims(rotated_target_N_coords[:min_target],axis=1), np.expand_dims(rotated_target_CA_coords[:min_target],axis=1), np.expand_dims(rotated_target_C_coords[:min_target],axis=1)],axis=1)
+    rotated_seed_coords = np.concatenate([np.expand_dims(rotated_seed_N_coords[:min_seed],axis=1), np.expand_dims(rotated_seed_CA_coords[:min_seed],axis=1), np.expand_dims(rotated_seed_C_coords[:min_seed],axis=1)],axis=1)
 
     return rotated_target_coords, rotated_seed_coords, rotated_CM
 
@@ -355,12 +359,10 @@ def write_seeds_for_design(seed_df, search_structure, mmcifdir, outdir, min_cont
         seed_C_coords = seed_coords[row.seed_chain][np.argwhere(seed_atoms[row.seed_chain]=='C')[:,0]][row.cs:row.ce+1]
         seed_seq = ''.join(seed_seqs[row.seed_chain][np.argwhere(seed_atoms[row.seed_chain]=='CA')[:,0]])[row.cs:row.ce+1]
         #Get the COM
-        try:
-            rotated_target_coords, rotated_seed_coords, rotated_CM = calc_COM(search_CA_coords, search_seq,
+        rotated_target_coords, rotated_seed_coords, rotated_CM = calc_COM(search_CA_coords, search_seq,
                                                                         target_N_coords, target_CA_coords, target_C_coords, target_seq,
                                                                         seed_N_coords, seed_CA_coords, seed_C_coords)
-        except:
-            continue
+
         #Save
         targets.append(rotated_target_coords)
         t_seqs.append(target_seq)
