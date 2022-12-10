@@ -203,7 +203,7 @@ def predict_binder(
         msa_output_dir=None)
 
   #Check for previous designs
-  num_finished_designs = len(glob.glob(output_dir+'unrelaxed_'+target_id+'*.pdb'))
+  num_finished_designs = len(glob.glob(output_dir_base+'unrelaxed_'+target_id+'*.pdb'))
   #batch
   peptide_sequences = np.array(peptide_sequences)[num_finished_designs:]
   #Iterate
