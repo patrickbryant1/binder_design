@@ -5,17 +5,17 @@ import glob
 import pdb
 
 
-def parse_results(results_dir, db='pdb100'):
-    """Parse the foldseek results
+def write_a3m(outname, aln, ids, evals):
+    """Write the alignment in a3m
     """
 
-    df = pd.read_csv(glob.glob(results_dir+'*_'+db+'.m8')[0], sep='\t', header=None)
-
-    aln_seqs = df[15].values
-    pdb_ids = [x.split('_')[0] for x in df[1].values]
-    pdb_chains = [x.split('_')[1] for x in df[1].values]
-
-    return aln_seqs, pdb_ids, pdb_chains
+    #Sort by eval
+    aln, ids, evals = np.array(aln), np.array(ids), np.array(evals)
+    aln, ids, evals = aln[np.argsort(evals)], ids[np.argsort(evals)], evals[np.argsort(evals)]
+    with open(outname, 'w') as file:
+        for i in range(len(ids)):
+            file.write('>'+ids[i]+'\n')
+            file.write(aln[i]+'\n')
 
 
 
@@ -24,7 +24,7 @@ def make_aln(query_seq, results_dir, eval_t=0.001):
     """
 
     hits = glob.glob(results_dir+'*.m8')
-    aln = [query_seq]
+    aln, ids, evals = [query_seq], ['Target_sequence'], [-1]
     query_len = len(query_seq)
     for hitname in hits:
         try:
@@ -39,7 +39,7 @@ def make_aln(query_seq, results_dir, eval_t=0.001):
         #Cols 14 and 15 are the pairwise aln btw the query and hit.
         #Both of these can contain gaps. If there are gaps in the query - these are insertions and should be removed
         #Add according to: 6,7; qstart,qend. qstart is the start pos
-        qstart, qend, tstart, tend, query_alns, hit_alns = df[6].values, df[7].values, df[8].values, df[9].values, df[14].values, df[15].values
+        hit_ids, qstart, qend, tstart, tend, hit_evals, query_alns, hit_alns =df[1].values, df[6].values, df[7].values, df[8].values, df[9].values, df[10].values, df[14].values, df[15].values
         for i in range(len(qstart)):
             qs_i, qe_i, qaln = qstart[i]-1, qend[i], query_alns[i]
             if '-' in qaln:
@@ -57,11 +57,16 @@ def make_aln(query_seq, results_dir, eval_t=0.001):
                 pdb.set_trace()
             else:
                 aln.append(aln_seq)
+                ids.append(hit_ids[i])
+                evals.append(hit_evals[i])
 
-    pdb.set_trace()
+    return aln, ids, evals
 
 
 
 
-query_seq = 'PQFTAGNSHVAQNRRNYMDPSYKLEKLRDIPEEDIVRLLAHRAPGEEYKSIHPPLEEMEEPDCAVRQIVKPTEGAAAGDRIRYVQYTDSMFFSPITPYQRAWEALNRYKGVDPGVLSGRTIIEARERDIEKIAKIEVDCELYDTARTGLRGRTVHGHAVRLDKDGMMFDALRRWSRGADGTVTYVKDMIGGAMDKEVTLGKPLSDAELLKKTTMYRNAQGGVWQEADDPESMDVTAQIHWKRSVGGFQPWAKMKDIKGGKKDVGVKNLKLFTPRGGVE'
-make_aln(query_seq, '/home/patrick/binder_design/data/Foldseek_results/')
+
+# query_seq = 'PQFTAGNSHVAQNRRNYMDPSYKLEKLRDIPEEDIVRLLAHRAPGEEYKSIHPPLEEMEEPDCAVRQIVKPTEGAAAGDRIRYVQYTDSMFFSPITPYQRAWEALNRYKGVDPGVLSGRTIIEARERDIEKIAKIEVDCELYDTARTGLRGRTVHGHAVRLDKDGMMFDALRRWSRGADGTVTYVKDMIGGAMDKEVTLGKPLSDAELLKKTTMYRNAQGGVWQEADDPESMDVTAQIHWKRSVGGFQPWAKMKDIKGGKKDVGVKNLKLFTPRGGVE'
+# eval_t=1
+# aln, ids, evals = make_aln(query_seq, '/home/patrick/binder_design/data/Foldseek_results/',eval_t)
+# write_a3m( '/home/patrick/binder_design/data/Foldseek_results/hits.a3m', aln, ids, evals)
