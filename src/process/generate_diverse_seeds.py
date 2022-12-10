@@ -355,9 +355,12 @@ def write_seeds_for_design(seed_df, search_structure, mmcifdir, outdir, min_cont
         seed_C_coords = seed_coords[row.seed_chain][np.argwhere(seed_atoms[row.seed_chain]=='C')[:,0]][row.cs:row.ce+1]
         seed_seq = ''.join(seed_seqs[row.seed_chain][np.argwhere(seed_atoms[row.seed_chain]=='CA')[:,0]])[row.cs:row.ce+1]
         #Get the COM
-        rotated_target_coords, rotated_seed_coords, rotated_CM = calc_COM(search_CA_coords, search_seq,
+        try:
+            rotated_target_coords, rotated_seed_coords, rotated_CM = calc_COM(search_CA_coords, search_seq,
                                                                         target_N_coords, target_CA_coords, target_C_coords, target_seq,
                                                                         seed_N_coords, seed_CA_coords, seed_C_coords)
+        except:
+            continue
         #Save
         targets.append(rotated_target_coords)
         t_seqs.append(target_seq)
