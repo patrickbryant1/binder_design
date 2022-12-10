@@ -91,8 +91,6 @@ def design_seqs(n_seqs_per_seed, ch1_coords, ch2_coords, ch1_atoms, ch2_atoms, c
     ch2_seq = ch2_seq[np.argwhere(ch2_atoms=='CA')[:,0]]
     ch2_seq = [three_to_one[x] for x in ch2_seq]
     ch2_seq = ''.join(ch2_seq)
-    pdb.set_trace()
-
 
     #Create a span of masked residues:
     #To partially mask backbone coordinates, simply set the masked coordinates to np.inf.

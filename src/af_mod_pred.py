@@ -37,7 +37,7 @@ from alphafold.data import templates
 from alphafold.model import data
 from alphafold.model import config
 from alphafold.model import model
-from alphafold.relax import relax
+#from alphafold.relax import relax
 import numpy as np
 import jax
 from jax import numpy as jnp
@@ -178,6 +178,7 @@ def predict_binder(
     fasta_path: str,
     fasta_name: str,
     output_dir_base: str,
+    msas: str,
     data_pipeline: pipeline.DataPipeline,
     random_seed: int,
     model_runners: Optional[Dict[str, model.RunModel]],
@@ -195,7 +196,7 @@ def predict_binder(
   # Get features. This only applies to the receptor
   feature_dict = data_pipeline.process(
         input_fasta_path=fasta_path,
-        input_msas=FLAGS.msas,
+        input_msas=msas,
         template_search=None,
         msa_output_dir=None)
 
@@ -216,7 +217,7 @@ def predict_binder(
 
 ######################MAIN###########################
 
-def run_preds(receptor_fasta_path, num_ensemble, max_recycles, data_dir, peptide_sequences, output_dir, target_id):
+def run_preds(receptor_fasta_path, msa, num_ensemble, max_recycles, data_dir, peptide_sequences, output_dir, target_id):
     """Run the predictions
     """
 
@@ -247,6 +248,7 @@ def run_preds(receptor_fasta_path, num_ensemble, max_recycles, data_dir, peptide
     predict_binder(fasta_path=receptor_fasta_path,
                     fasta_name=fasta_name,
                     output_dir_base=output_dir,
+                    msas=[msa],
                     data_pipeline=data_pipeline,
                     random_seed=random_seed,
                     model_runners=model_runners,
