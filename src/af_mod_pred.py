@@ -227,9 +227,10 @@ def run_preds(receptor_fasta_path, msa, num_ensemble, max_recycles, data_dir, pe
     # Check for duplicate FASTA file names.
     fasta_name = pathlib.Path(receptor_fasta_path).stem
 
+    model_name='model_1'
     data_pipeline = foldonly.FoldDataPipeline()
     model_runners = {}
-    model_config = config.model_config('model_1')
+    model_config = config.model_config(model_name)
     model_config.data.eval.num_ensemble = num_ensemble
     model_config.data.common.num_recycle = max_recycles
     model_config.model.num_recycle = max_recycles
