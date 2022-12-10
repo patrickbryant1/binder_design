@@ -70,7 +70,7 @@ def load_model():
     model = model.eval()
     return model
 
-def design_seqs(n_seqs_per_seed, ch1_coords, ch2_coords, ch1_atoms, ch2_atoms, ch1_seq, ch2_seq, model=None, t=1e-6, crop_len=0):
+def design_seqs(n_seqs_per_seed, ch1_coords, ch2_coords, ch1_atoms, ch2_atoms, ch1_seq, ch2_seq, model=None, t=1e-6):
     """Design seqs for the provided coords
     """
 
@@ -91,6 +91,7 @@ def design_seqs(n_seqs_per_seed, ch1_coords, ch2_coords, ch1_atoms, ch2_atoms, c
     ch2_seq = ch2_seq[np.argwhere(ch2_atoms=='CA')[:,0]]
     ch2_seq = [three_to_one[x] for x in ch2_seq]
     ch2_seq = ''.join(ch2_seq)
+    pdb.set_trace()
 
 
     #Create a span of masked residues:
