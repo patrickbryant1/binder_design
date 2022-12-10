@@ -317,6 +317,7 @@ def write_pdb(target_coords, target_seq, seed_coords, seed_seq, outname):
                 chain, str(resno), x, y, z, '1.00','100',atom[0])+'\n')
                 atmno+=1
                 ai+=1 #Atom index
+            resno+=1
 
 
 
