@@ -202,7 +202,6 @@ def run_scoring(native_structure, seed_df, row_num, preds):
         results['plddt'].append(pred_plDDT['B'].mean())
         results['delta_CM'].append(delta_CM )
 
-        print(i)
     #Df
     results_df = pd.DataFrame.from_dict(results)
     results_df['loss'] = 1/results_df.plddt*results_df.if_dist_binder*results_df.if_dist_receptor*0.5*results_df.delta_CM
