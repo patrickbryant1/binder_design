@@ -184,8 +184,7 @@ def calc_contact_sim(native_contacts, pred_contacts):
 
 
 def calc_metrics(pred_name, native_receptor_CA_coords, binder_CA_coords,
-                native_receptor_if_res, binder_if_res,
-                COM, grouped_native_contacts):
+                native_receptor_if_res, binder_if_res, COM):
     '''Calculate metrics
     average receptor if dists
     average binder if dists
@@ -241,10 +240,7 @@ def calc_metrics(pred_name, native_receptor_CA_coords, binder_CA_coords,
     # pred_contacts = np.argwhere(contact_dists<8)
     # #Group the contacts
     # grouped_pred_contacts = group_residues(pred_contacts, pred_binder_seq)
-    #
-    # #Calculate the contact similarity btw the design and native binders
-    # frac_rec_contacts = calc_contact_sim(grouped_native_contacts, grouped_pred_contacts)
-
+    
     return (closest_dists_binder, closest_dists_receptor, pred_plDDT, delta_CM)
 
 
@@ -282,7 +278,7 @@ def run_scoring(native_structure, seed_df, row_num, preds):
     crop_contacts = np.argwhere((receptor_binder_contacts[:,1]>=row.cs)&(receptor_binder_contacts[:,1]<row.ce))[:,0]
     crop_contacts = receptor_binder_contacts[crop_contacts]
     #Group them
-    grouped_native_contacts = group_residues(crop_contacts, native_binder_seq)
+    #grouped_native_contacts = group_residues(crop_contacts, native_binder_seq)
 
 
     #Get all the predicted files
@@ -293,8 +289,7 @@ def run_scoring(native_structure, seed_df, row_num, preds):
         #Get the loss metrics
         (closest_dists_binder, closest_dists_receptor,
         pred_plDDT, delta_CM) = calc_metrics(preds[i], receptor_CAs, binder_CAs[row.cs:row.ce],
-                                            receptor_if_res, binder_if_res_crop,
-                                            COM, grouped_native_contacts)
+                                            receptor_if_res, binder_if_res_crop, COM)
 
 
         #Get the seq recovery in the binder interface pos
