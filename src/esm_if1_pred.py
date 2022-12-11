@@ -70,7 +70,7 @@ def load_model():
     model = model.eval()
     return model
 
-def design_seqs(n_seqs_per_seed, ch1_coords, ch2_coords, ch1_atoms, ch2_atoms, ch1_seq, ch2_seq, model=None, t=1e-6):
+def design_seqs(n_seqs_per_seed, ch1_coords, ch2_coords, ch1_atoms, ch2_atoms, ch1_seq, ch2_seq, model=None, t=1e-6, max_receptor_len):
     """Design seqs for the provided coords
     """
 
@@ -79,14 +79,28 @@ def design_seqs(n_seqs_per_seed, ch1_coords, ch2_coords, ch1_atoms, ch2_atoms, c
     #Get the backbone coords (3x3 matrix for each residue; N, CA, C coords
     N, CA, C = ch1_coords[np.argwhere(ch1_atoms=='N')[:,0]], ch1_coords[np.argwhere(ch1_atoms=='CA')[:,0]], ch1_coords[np.argwhere(ch1_atoms=='C')[:,0]]
     ch1_bb_coords = np.concatenate([np.expand_dims(N,1), np.expand_dims(CA,1), np.expand_dims(C,1)], axis=1)
-    print(ch1_bb_coords.shape())
     N, CA, C = ch2_coords[np.argwhere(ch2_atoms=='N')[:,0]], ch2_coords[np.argwhere(ch2_atoms=='CA')[:,0]], ch2_coords[np.argwhere(ch2_atoms=='C')[:,0]]
     ch2_bb_coords = np.concatenate([np.expand_dims(N,1), np.expand_dims(CA,1), np.expand_dims(C,1)], axis=1)
 
+    #Get contact pos
+    #Calc 2-norm - distance between chains
+    mat = np.append(ch1_bb_coords[:,1,:], ch2_bb_coords[:,1,:], axis=0)
+    a_min_b = mat[:,np.newaxis,:] -mat[np.newaxis,:,:]
+    dists = np.sqrt(np.sum(a_min_b.T ** 2, axis=0)).T
+    #Get interface
+    l1 = len(ch1_bb_coords)
+    contact_dists = dists[:l1,l1:] #first dimension = ch1, second = ch2
+    contacts = np.argwhere(contact_dists<10)
+    #Get min and max contact res
+    si, ei = min(contacts[:,0]), max(contacts[:,0])
+    s_crop = int(max(0,si-max_receptor_len/2))
+    e_crop = min(s_crop+max_receptor_len, ei)
+    #crop
+    ch1_bb_coords = ch1_bb_coords[s_crop:e_crop, :, :] #Get the best crop
     #Seqs
     three_to_one = {'ARG':'R', 'HIS':'H', 'LYS':'K', 'ASP':'D', 'GLU':'E', 'SER':'S', 'THR':'T', 'ASN':'N', 'GLN':'Q', 'CYS':'C', 'GLY':'G', 'PRO':'P', 'ALA':'A', 'ILE':'I', 'LEU':'L', 'MET':'M', 'PHE':'F', 'TRP':'W', 'TYR':'Y', 'VAL':'V',
     'SEC':'U', 'PYL':'O', 'GLX':'X', 'UNK': 'X'}
-    ch1_seq = ch1_seq[np.argwhere(ch1_atoms=='CA')[:,0]]
+    ch1_seq = ch1_seq[np.argwhere(ch1_atoms=='CA')[:,0]][si:ei]
     ch1_seq = [three_to_one[x] for x in ch1_seq]
     ch1_seq = ''.join(ch1_seq)
     ch2_seq = ch2_seq[np.argwhere(ch2_atoms=='CA')[:,0]]
