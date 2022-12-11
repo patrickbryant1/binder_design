@@ -292,10 +292,9 @@ def run_scoring(native_structure, seed_df, row_num, preds):
 
         #Get the loss metrics
         (closest_dists_binder, closest_dists_receptor,
-        pred_plDDT, delta_CM) = calc_metrics(pred_dir+'unrelaxed_'+target_id+'_'+str(i+1)+'.pdb',
-                                        receptor_CAs, binder_CAs[row.cs:row.ce],
-                                        receptor_if_res, binder_if_res_crop,
-                                        COM, grouped_native_contacts)
+        pred_plDDT, delta_CM) = calc_metrics(preds[i], receptor_CAs, binder_CAs[row.cs:row.ce],
+                                            receptor_if_res, binder_if_res_crop,
+                                            COM, grouped_native_contacts)
 
 
         #Get the seq recovery in the binder interface pos
