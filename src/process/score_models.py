@@ -184,8 +184,6 @@ def calc_contact_sim(native_contacts, pred_contacts):
 
 
 def calc_metrics(pred_name, native_receptor_CA_coords, binder_CA_coords,
-                native_receptor_CB_coords, native_receptor_sequence,
-                pred_receptor_seq, pred_binder_seq,
                 native_receptor_if_res, binder_if_res,
                 COM, grouped_native_contacts):
     '''Calculate metrics
@@ -234,7 +232,7 @@ def calc_metrics(pred_name, native_receptor_CA_coords, binder_CA_coords,
     closest_dists_receptor = contact_dists[np.argmin(contact_dists,axis=0),np.arange(contact_dists.shape[1])]
 
     #Calculate the sequence recovery in the target interface
-    if_recovery, overall_recovery = calc_target_if_seq_recovery(pred_receptor_seq, native_receptor_sequence, native_receptor_if_res)
+    #if_recovery, overall_recovery = calc_target_if_seq_recovery(pred_receptor_seq, native_receptor_sequence, native_receptor_if_res)
 
     #Get the residue groupings for the predicted receptor contacts
     # mat = np.append(pred_CB_coords['A'], pred_CB_coords['B'],axis=0)
@@ -302,8 +300,6 @@ def run_scoring(native_structure, seed_df, row_num, preds):
         (closest_dists_binder, closest_dists_receptor,
         pred_plDDT, delta_CM) = calc_metrics(pred_dir+'unrelaxed_'+target_id+'_'+str(i+1)+'.pdb',
                                         receptor_CAs, binder_CAs[row.cs:row.ce],
-                                        receptor_CBs, native_receptor_seq,
-                                        pred_receptor_seq, pred_binder_seq,
                                         receptor_if_res, binder_if_res_crop,
                                         COM, grouped_native_contacts)
 
