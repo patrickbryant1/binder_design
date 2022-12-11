@@ -89,24 +89,23 @@ def get_native_features(native_CA_coords, native_CB_coords, receptor_chain, bind
     receptor_CAs = native_CA_coords[receptor_chain]
     binder_CAs = native_CA_coords[binder_chain]
     #Get the CB coords
-    receptor_CBs = native_CB_coords[receptor_chain]
-    binder_CBs = native_CB_coords[binder_chain]
+    #receptor_CBs = native_CB_coords[receptor_chain]
+    #binder_CBs = native_CB_coords[binder_chain]
 
     #Calc 2-norm - distance between binder and interface
-    mat = np.append(receptor_CBs, binder_CBs,axis=0)
+    mat = np.append(receptor_CAs, binder_CAs,axis=0)
     a_min_b = mat[:,np.newaxis,:] -mat[np.newaxis,:,:]
     dists = np.sqrt(np.sum(a_min_b.T ** 2, axis=0)).T
-    l1 = len(receptor_CBs)
+    l1 = len(receptor_CAs)
     #Get interface
     contact_dists = dists[:l1,l1:] #first dimension = receptor, second = binder
-    contacts = np.argwhere(contact_dists<8)
+    contacts = np.argwhere(contact_dists<10) #CAs within 10 Å
     receptor_if_res, binder_if_res = np.unique(contacts[:,0]), np.unique(contacts[:,1])
 
     #Centre of mass for binder
     COM = np.sum(binder_CAs,axis=0)/(binder_CAs.shape[0])
 
-    return (receptor_if_res, binder_if_res, COM, receptor_CAs,
-    binder_CAs, receptor_CBs, binder_CBs, contacts)
+    return (receptor_if_res, binder_if_res, COM, receptor_CAs, binder_CAs, contacts)
 
 def calc_if_rmsd(native_CA, pred_CA):
     """Calculate the RMSD of the CA residues
@@ -217,8 +216,8 @@ def calc_metrics(pred_name, native_receptor_CA_coords, binder_CA_coords,
     pred_receptor_CBs = pred_CB_coords['A']
     pred_receptor_CBs = np.dot(pred_receptor_CBs, rot) + tran
     #Calculate the interface RMSD
-    binder_rmsd = calc_if_rmsd(binder_CA_coords[binder_if_res], rotated_coords[binder_if_res])
-    receptor_rmsd = calc_if_rmsd(native_receptor_CB_coords[native_receptor_if_res], pred_receptor_CBs[native_receptor_if_res])
+    #binder_rmsd = calc_if_rmsd(binder_CA_coords[binder_if_res], rotated_coords[binder_if_res])
+    #receptor_rmsd = calc_if_rmsd(native_receptor_CB_coords[native_receptor_if_res], pred_receptor_CBs[native_receptor_if_res])
 
     #Calc 2-norm - distance between peptide and interface
     #Get the interface positions
@@ -238,22 +237,20 @@ def calc_metrics(pred_name, native_receptor_CA_coords, binder_CA_coords,
     if_recovery, overall_recovery = calc_target_if_seq_recovery(pred_receptor_seq, native_receptor_sequence, native_receptor_if_res)
 
     #Get the residue groupings for the predicted receptor contacts
-    mat = np.append(pred_CB_coords['A'], pred_CB_coords['B'],axis=0)
-    a_min_b = mat[:,np.newaxis,:] -mat[np.newaxis,:,:]
-    dists = np.sqrt(np.sum(a_min_b.T ** 2, axis=0)).T
-    l1 = len(pred_CB_coords['A'])
-    #Get interface
-    contact_dists = dists[:l1,l1:] #first dimension = receptor, second = peptide
-    pred_contacts = np.argwhere(contact_dists<8)
-    #Group the contacts
-    grouped_pred_contacts = group_residues(pred_contacts, pred_binder_seq)
+    # mat = np.append(pred_CB_coords['A'], pred_CB_coords['B'],axis=0)
+    # a_min_b = mat[:,np.newaxis,:] -mat[np.newaxis,:,:]
+    # dists = np.sqrt(np.sum(a_min_b.T ** 2, axis=0)).T
+    # l1 = len(pred_CB_coords['A'])
+    # #Get interface
+    # contact_dists = dists[:l1,l1:] #first dimension = receptor, second = peptide
+    # pred_contacts = np.argwhere(contact_dists<8)
+    # #Group the contacts
+    # grouped_pred_contacts = group_residues(pred_contacts, pred_binder_seq)
+    #
+    # #Calculate the contact similarity btw the design and native binders
+    # frac_rec_contacts = calc_contact_sim(grouped_native_contacts, grouped_pred_contacts)
 
-    #Calculate the contact similarity btw the design and native binders
-    frac_rec_contacts = calc_contact_sim(grouped_native_contacts, grouped_pred_contacts)
-
-    return (closest_dists_binder, closest_dists_receptor, pred_plDDT,
-    delta_CM, binder_rmsd, receptor_rmsd, if_recovery, overall_recovery,
-    frac_rec_contacts)
+    return (closest_dists_binder, closest_dists_receptor, pred_plDDT, delta_CM)
 
 
 
@@ -274,15 +271,12 @@ def run_scoring(native_structure, design_df, preds):
     native_binder_seq = native_seqs[binder_chain]
     #Get receptor if res and binder COM
     (receptor_if_res, binder_if_res, COM, receptor_CAs,
-    binder_CAs, receptor_CBs, binder_CBs, receptor_binder_contacts) = get_native_features(native_CA_coords, native_CB_coords,
-                                                                                        receptor_chain, binder_chain, native_binder_seq)
+    binder_CAs, receptor_binder_contacts) = get_native_features(native_CA_coords, native_CB_coords,
+                                                                receptor_chain, binder_chain, native_binder_seq)
 
 
     #Go through all crops
-    results = {'if_dist_binder':[], 'if_dist_receptor':[], 'plddt':[],
-                'delta_CM':[], 'binder_if_CA_rmsd':[], 'receptor_if_CB_rmsd':[],
-                'receptor_if_seq_recovery':[], 'receptor_overall_seq_recovery':[],
-                'frac_recovered_contacts':[], 'binder_if_seq_rec':[]}
+    results = {'if_dist_binder':[], 'if_dist_receptor':[], 'plddt':[], 'delta_CM':[] }
 
     #Get the crop region
     row = sel.loc[0]
@@ -305,9 +299,8 @@ def run_scoring(native_structure, design_df, preds):
         pred_receptor_seq = np.array([x for x in designed_receptor_seqs[i]])
         pred_binder_seq = np.array([x for x in designed_binder_seqs[i]])
         #Get the loss metrics
-        (closest_dists_binder, closest_dists_receptor,pred_plDDT,
-        delta_CM, binder_rmsd, receptor_rmsd, if_recovery, overall_recovery,
-        frac_rec_contacts) = calc_metrics(pred_dir+'unrelaxed_'+target_id+'_'+str(i+1)+'.pdb',
+        (closest_dists_binder, closest_dists_receptor,
+        pred_plDDT, delta_CM) = calc_metrics(pred_dir+'unrelaxed_'+target_id+'_'+str(i+1)+'.pdb',
                                         receptor_CAs, binder_CAs[row.cs:row.ce],
                                         receptor_CBs, native_receptor_seq,
                                         pred_receptor_seq, pred_binder_seq,
@@ -316,21 +309,21 @@ def run_scoring(native_structure, design_df, preds):
 
 
         #Get the seq recovery in the binder interface pos
-        binder_if_seq = ''.join(pred_binder_seq[binder_if_res_crop])
-        native_if_seq = ''.join(native_binder_seq[binder_if_res_crop])
-        binder_if_seq_rec = np.mean([(a==b) for a, b in zip(binder_if_seq, native_if_seq)])
+        #binder_if_seq = ''.join(pred_binder_seq[binder_if_res_crop])
+        #native_if_seq = ''.join(native_binder_seq[binder_if_res_crop])
+        #binder_if_seq_rec = np.mean([(a==b) for a, b in zip(binder_if_seq, native_if_seq)])
 
         #Save
         results['if_dist_binder'].append(closest_dists_binder.mean())
         results['if_dist_receptor'].append(closest_dists_receptor.mean())
         results['plddt'].append(pred_plDDT['B'].mean())
         results['delta_CM'].append(delta_CM )
-        results['binder_if_CA_rmsd'].append(binder_rmsd)
-        results['receptor_if_CB_rmsd'].append(receptor_rmsd)
-        results['receptor_if_seq_recovery'].append(if_recovery)
-        results['receptor_overall_seq_recovery'].append(overall_recovery)
-        results['frac_recovered_contacts'].append(frac_rec_contacts)
-        results['binder_if_seq_rec'].append(binder_if_seq_rec)
+        #results['binder_if_CA_rmsd'].append(binder_rmsd)
+        #results['receptor_if_CB_rmsd'].append(receptor_rmsd)
+        #results['receptor_if_seq_recovery'].append(if_recovery)
+        #results['receptor_overall_seq_recovery'].append(overall_recovery)
+        #results['frac_recovered_contacts'].append(frac_rec_contacts)
+        #results['binder_if_seq_rec'].append(binder_if_seq_rec)
 
         print(i)
     #Df
