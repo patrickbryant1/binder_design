@@ -279,7 +279,7 @@ def run_scoring(native_structure, design_df, preds):
     results = {'if_dist_binder':[], 'if_dist_receptor':[], 'plddt':[], 'delta_CM':[] }
 
     #Get the crop region
-    row = sel.loc[0]
+    row = design_df.loc[0]
     binder_if_res_crop =  np.argwhere((binder_if_res>=row.cs)&(binder_if_res<row.ce))[:,0]
     binder_if_res_crop-=binder_if_res_crop[0]
 
