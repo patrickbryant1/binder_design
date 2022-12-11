@@ -257,7 +257,7 @@ def calc_metrics(pred_name, native_receptor_CA_coords, binder_CA_coords,
 
 
 #################MAIN####################
-def run_scoring(native_structure, design_df, preds):
+def run_scoring(native_structure, seed_df, row_num, preds):
     """Run function for the scoring
     """
 
@@ -279,7 +279,7 @@ def run_scoring(native_structure, design_df, preds):
     results = {'if_dist_binder':[], 'if_dist_receptor':[], 'plddt':[], 'delta_CM':[] }
 
     #Get the crop region
-    row = design_df.loc[0]
+    row = seed_df.loc[row_num]
     binder_if_res_crop =  np.argwhere((binder_if_res>=row.cs)&(binder_if_res<row.ce))[:,0]
     binder_if_res_crop-=binder_if_res_crop[0]
 
