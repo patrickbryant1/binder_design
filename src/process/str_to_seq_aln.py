@@ -54,7 +54,6 @@ def make_aln(query_seq, results_dir, eval_t=0.001):
             aln_seq = '-'*qs_i+hit_aln+'-'*remainder
             if len(aln_seq)!=query_len:
                 print('mismatch!')
-                pdb.set_trace()
             else:
                 aln.append(aln_seq)
                 ids.append(hit_ids[i])
