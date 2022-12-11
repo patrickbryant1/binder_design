@@ -79,8 +79,7 @@ def design_seqs(n_seqs_per_seed, ch1_coords, ch2_coords, ch1_atoms, ch2_atoms, c
     #Get the backbone coords (3x3 matrix for each residue; N, CA, C coords
     N, CA, C = ch1_coords[np.argwhere(ch1_atoms=='N')[:,0]], ch1_coords[np.argwhere(ch1_atoms=='CA')[:,0]], ch1_coords[np.argwhere(ch1_atoms=='C')[:,0]]
     ch1_bb_coords = np.concatenate([np.expand_dims(N,1), np.expand_dims(CA,1), np.expand_dims(C,1)], axis=1)
-    #Keep the ch1_bb_coords maxx 200 res
-    ch1_bb_coords = ch1_coords[:200,:,:]
+    print(ch1_bb_coords.shape())
     N, CA, C = ch2_coords[np.argwhere(ch2_atoms=='N')[:,0]], ch2_coords[np.argwhere(ch2_atoms=='CA')[:,0]], ch2_coords[np.argwhere(ch2_atoms=='C')[:,0]]
     ch2_bb_coords = np.concatenate([np.expand_dims(N,1), np.expand_dims(CA,1), np.expand_dims(C,1)], axis=1)
 
